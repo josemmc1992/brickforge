@@ -1,0 +1,13 @@
+services:
+  brickforge:
+    build: .
+    ports:
+      - "127.0.0.1:3100:3100"
+    environment:
+      BRICKFORGE_TOKEN: ${BRICKFORGE_TOKEN:?Set a random token of at least 32 characters}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3100}
+    volumes:
+      - brickforge-data:/app/data
+    restart: unless-stopped
+volumes:
+  brickforge-data:

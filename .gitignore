@@ -1,0 +1,39 @@
+# Dependencies and generated files
+node_modules/
+/dist/
+/dist-server/
+/coverage/
+*.tsbuildinfo
+*.log
+
+# Private local state: never publish models or credentials
+/data/
+/backups/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+.npmrc
+!.npmrc.example
+
+# Local assistant instructions and workspace state
+AGENTS.local.md
+CLAUDE.local.md
+.agents/
+.codex/
+.claude/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.zip
+*.tar.gz

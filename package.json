@@ -1,0 +1,52 @@
+{
+  "name": "brickforge",
+  "version": "0.1.0-beta.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node --env-file-if-exists=.env dist-server/http.mjs",
+    "mcp": "node --env-file-if-exists=.env dist-server/stdio.mjs",
+    "test": "node scripts/test-portable.mjs",
+    "backup": "node --env-file-if-exists=.env dist-server/backup.mjs",
+    "typecheck": "tsc --noEmit",
+    "check:repository": "node scripts/check-repository.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "three": "0.180.0",
+    "lucide-react": "1.31.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.4",
+    "@vitejs/plugin-react": "6.0.2",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@types/three": "0.180.0"
+  },
+  "description": "Design LEGO creations with AI: a beta 3D editor and generic MCP server with local SQLite storage.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/josemmc1992/brickforge.git"
+  },
+  "homepage": "https://github.com/josemmc1992/brickforge",
+  "bugs": {
+    "url": "https://github.com/josemmc1992/brickforge/issues"
+  },
+  "keywords": [
+    "lego",
+    "ai",
+    "mcp",
+    "ldraw",
+    "3d",
+    "beta"
+  ]
+}
