@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict';
+import {analyze,validatePieces,robot,snapAbove,exportLdr} from '../lib/model';
+const demo=validatePieces(robot());assert.equal(demo.length,24);assert.equal(analyze(demo).overlapCount,0);
+const many=validatePieces(Array.from({length:2000},(_,i)=>({...demo[0],id:String(i).padStart(80,'a'),rotation:[0,0,0]})));
+const report=analyze(many);assert.equal(report.overlapCount,1999000);assert.equal(report.overlaps.length,100);assert.equal(report.truncated,true);assert.ok(JSON.stringify(report).length<25000);
+assert.throws(()=>validatePieces([demo[0],demo[0]]));assert.throws(()=>validatePieces([{...demo[0],position:[NaN,0,0]}]));assert.throws(()=>snapAbove({...demo[0],rotation:[0,90,0]},'3003'));
+const rotated=exportLdr({id:'test',name:'Test\nNo injection',revision:1,updatedAt:'',pieces:[{...demo[0],rotation:[0,90,0]}]});assert.ok(rotated.includes('0 Test No injection'));assert.ok(rotated.includes('0 0 1 0 1 0 -1 0 0'));
+console.log('PASS: demo, 2000-piece overlap bound, duplicate IDs, nonfinite values, unsupported snap, rotated export');
