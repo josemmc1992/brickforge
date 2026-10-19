@@ -1,67 +1,41 @@
 // Shared, deterministic connection and collision engine. No browser/DB dependencies.
 import catalog from './catalog-data.json';
+import variants from './assembly-variants.json';
 import type {Piece} from './model';
-export type Vec=[number,number,number];
-type Connector={id:string;kind:'stud'|'socket';point:Vec;normal:Vec};
-type Solid={vertices:Vec[];normals:Vec[];edges:Vec[]};
-export type Profile={source:string;solids:Solid[];connectors:Connector[]};
+import {baseProfile,basePartIds,box,type Profile,type Vec,type Connector,type Solid} from './base-profiles';
+import {generatedEntry,unavailableReason,preparedGeneratedProfile,generatedFitLimits,generatedAxialFitLimits,generatedKeyedAxialFitLimits,generatedAccessFitLimits,generatedTechnicPinFitLimits,generatedMinifigNeckFitLimits,generatedMinifigHipFitLimits} from './generated-profiles';
+import {mechanicalConnectorsMatch as axialConnectorsMatch,mechanicalEngagement as axialEngagement,mechanicalOffsetRange as axialOffsetRange,transformMechanicalConnector as transformAxialConnector,isMechanicalConnector,isShaft,isLegacyAxial,mechanicalKindsCompatible,type MechanicalConnector as AxialConnector} from './mechanical-fit';
+import {collectAxialConnections,type AssemblyConnection} from './axial-connections';
+import {technicPinConnectorsMatch,technicPinKindsCompatible,type TechnicPinConnector} from './technic-pin-fit';
+import {minifigNeckConnectorsMatch,minifigNeckKindsCompatible,type MinifigNeckConnector} from './minifig-neck-fit';
+import {minifigHipConnectorsMatch,minifigHipKindsCompatible,type MinifigHipConnector} from './minifig-hips-fit';
+export type {Profile,Vec} from './base-profiles';
+export type {AssemblyConnection} from './axial-connections';
 const EPS=.01;
 const plus=(a:Vec,b:Vec):Vec=>a.map((v,i)=>v+b[i]) as Vec;
 const minus=(a:Vec,b:Vec):Vec=>a.map((v,i)=>v-b[i]) as Vec;
 const dot=(a:Vec,b:Vec)=>a.reduce((n,v,i)=>n+v*b[i],0);
 const cross=(a:Vec,b:Vec):Vec=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 const near=(a:Vec,b:Vec)=>Math.hypot(...minus(a,b))<EPS;
-function prism(poly:[number,number][],lo:number,hi:number,axis:0|2=2):Solid{
- const vertex=(a:number,b:number,c:number):Vec=>axis===2?[a,b,c]:[c,b,a];
- const vertices=[...poly.map(([a,b])=>vertex(a,b,lo)),...poly.map(([a,b])=>vertex(a,b,hi))];
- const edges=poly.map(([a,b],i)=>{const q=poly[(i+1)%poly.length];return vertex(q[0]-a,q[1]-b,0)});
- const depth=vertex(0,0,1);return {vertices,normals:[depth,...edges.map(e=>cross(e,depth))],edges:[depth,...edges]};
-}
-function box(x0:number,x1:number,y0:number,y1:number,z0:number,z1:number){return prism([[x0,y0],[x1,y0],[x1,y1],[x0,y1]],z0,z1);}
-function grid(w:number,d:number,y:number,kind:'stud'|'socket',zOffset=0):Connector[]{
- const out:Connector[]=[];for(let x=-w/2+10;x<w/2;x+=20)for(let z=-d/2+10;z<d/2;z+=20)out.push({id:`${kind}:${x}:${z+zOffset}:${y}`,kind,point:[x,y,z+zOffset],normal:[0,kind==='stud'?1:-1,0]});return out;
-}
-function rectangular(w:number,d:number,h:number,studs=true):Profile{return {source:'rectangular-v1',solids:[box(-w/2,w/2,-h,0,-d/2,d/2)],connectors:[...(studs?grid(w,d,0,'stud'):[]),...grid(w,d,-h,'socket')]};}
-function round(radius:number,height:number,topRadius=radius):Solid{
- // Circumscribed polygon: conservative at the curved boundary, never fits inside it.
- const n=16,f=1/Math.cos(Math.PI/n),vertices:Vec[]=[];
- for(const [r,y] of [[radius,-height],[topRadius,0]])for(let i=0;i<n;i++){const a=(i+.5)*2*Math.PI/n;vertices.push([r*f*Math.cos(a),y,r*f*Math.sin(a)]);}
- const edges:Vec[]=[[0,1,0]],normals:Vec[]=[[0,1,0]];
- for(let i=0;i<n;i++){const j=(i+1)%n,e=minus(vertices[j],vertices[i]),v=minus(vertices[i+n],vertices[i]);edges.push(e,v);normals.push(cross(e,v));}
- return {vertices,normals,edges};
-}
 const profiles=new Map<string,Profile|null>();
-const sourceParts=new Map(catalog.map(p=>[p.id,p]));
+const catalogIds=new Set(catalog.map(p=>p.id));
+const aliases=variants.aliases as Record<string,{base:string;evidence:string}>;
 export function profile(part:string):Profile|null{
- if(profiles.has(part))return profiles.get(part)!;
- const p=sourceParts.get(part);let result:Profile|null=null;
- if(p?.basic){const {width:w,depth:d,height:h}=p.basic;result=rectangular(w,d,h);}
- const tile=p?.name.match(/^Tile\s+(\d+)\s+x\s+(\d+)(?: with Groove| without Groove)?$/);
- if(tile)result=rectangular(+tile[2]*20,+tile[1]*20,8,false);
- if(['3039','3037'].includes(part)){
-  const w=part==='3039'?40:80;
-  result={source:'ldraw-reviewed-slope-v1',solids:[prism([[-30,-24],[10,-24],[10,0],[-10,0],[-30,-20]],-w/2,w/2,0)],connectors:[...grid(w,20,0,'stud'),...grid(w,40,-24,'socket',-10)]};
+ if(profiles.has(part))return profiles.get(part)??preparedGeneratedProfile(part);
+ let result=baseProfile(part);
+ const alias=Object.hasOwn(aliases,part)?aliases[part]:undefined;
+ // One verified hop only: aliases can never make an unreviewed shape buildable.
+ if(!result&&catalogIds.has(part)&&alias&&alias.evidence){
+  const base=baseProfile(alias.base);
+  if(base)result={...base,source:'ldraw-verified-decoration-v1',basePart:alias.base};
  }
- if(['3659','3307'].includes(part)){
-  const small=part==='3659',w=small?80:120,h=small?24:48,r=small?20:40,cy=small?28:48,ry=small?20:36;
-  const solids=[box(-w/2,-r,-h,0,-10,10),box(r,w/2,-h,0,-10,10)];
-  const n=small?8:24;
-  for(let i=0;i<n;i++){const a=-Math.PI/2+i*Math.PI/n,b=-Math.PI/2+(i+1)*Math.PI/n,x0=r*Math.sin(a),x1=r*Math.sin(b),y0=Math.max(-h,-cy+ry*Math.cos(a)),y1=Math.max(-h,-cy+ry*Math.cos(b));solids.push(prism([[x0,y0],[x1,y1],[x1,0],[x0,0]],-10,10));}
-  result={source:'ldraw-reviewed-arch-v1',solids,connectors:[...grid(w,20,0,'stud'),...grid(w,20,-h,'socket').filter(c=>Math.abs(c.point[0])>r)]};
- }
- const rounds:Record<string,[number,number,number,number,boolean]>={
-  '6141':[10,8,10,20,true],'3062b':[10,24,10,20,true],'98138':[10,8,10,20,false],
-  '3941':[20,24,20,40,true],'6143':[20,24,20,40,true],
-  '4589':[10,24,5,20,true],'3942c':[20,48,10,40,true],'98100':[20,24,10,40,true],
- };
- if(rounds[part]){const [r,h,top,w,studs]=rounds[part],isCone=top!==r;result={source:'reviewed-round-envelope-v1',solids:[round(r,h,top)],connectors:[...(studs?grid(isCone?20:w,isCone?20:w,0,'stud'):[]),...grid(w,w,-h,'socket')]};}
- if(part==='4070'){
-  result={source:'ldraw-reviewed-headlight-v1',solids:[box(-10,10,-24,-20,-10,10),box(-10,10,-20,0,-6,10)],connectors:[...grid(20,20,0,'stud'),...grid(20,20,-24,'socket'),{id:'stud:front',kind:'stud',point:[0,-10,-6],normal:[0,0,-1]}]};
- }
- profiles.set(part,result);return result;
+ profiles.set(part,result);return result??preparedGeneratedProfile(part);
 }
-export const supportedPartCount=catalog.filter(p=>profile(p.id)).length;
-export function partConnectionInfo(part:string){const p=profile(part);return p?{supported:true,profile:p.source,connectors:p.connectors,rotations:'quarter-turns XYZ',collision:'convex compound envelopes; curved surfaces conservative'}:{supported:false,reason:'Esta pieza aún no tiene un perfil de encaje. Se puede visualizar, pero no añadir al ensamblaje.'};}
+const curatedIds=new Set([...basePartIds,...Object.keys(aliases).filter(id=>catalogIds.has(id)&&baseProfile(aliases[id].base))]);
+export function isSupportedPart(part:string){return curatedIds.has(part)||!!generatedEntry(part);}
+export const supportedPartCount=catalog.filter(p=>isSupportedPart(p.id)).length;
+export const connectionCoverage={basePartCount:basePartIds.length,variantCount:curatedIds.size-basePartIds.length,generatedPartCount:supportedPartCount-curatedIds.size,supportedPartCount};
+export function partConnectionInfo(part:string){const p=profile(part);return p?{supported:true,profile:p.source,family:p.family,basePart:p.basePart??part,connectors:p.connectors,rotations:'quarter-turns XYZ',fitLimits:p.source==='ldraw-minifig-hips-envelope-v1'?generatedMinifigHipFitLimits:p.source==='ldraw-minifig-neck-envelope-v1'?generatedMinifigNeckFitLimits:p.source==='ldraw-technic-pin-envelope-v1'?generatedTechnicPinFitLimits:p.source==='ldraw-standard-access-envelope-v1'?generatedAccessFitLimits:p.source==='ldraw-keyed-axial-envelope-v1'?generatedKeyedAxialFitLimits:p.source==='ldraw-axial-envelope-v1'?generatedAxialFitLimits:p.source==='ldraw-shadow-envelope-v1'?generatedFitLimits:undefined,collision:p.source==='ldraw-minifig-hips-envelope-v1'?'source-preserving paired waist posts and torso sockets; fixed keyed seating and full-body collision validation':p.source==='ldraw-minifig-neck-envelope-v1'?'source-preserving torso and head socket; fixed seating and full-body collision validation':p.source==='ldraw-technic-pin-envelope-v1'?'source-preserving stepped through holes and reviewed complete pin; fixed seating and full-body collision validation':p.source==='ldraw-standard-access-envelope-v1'?'source-preserving body with a verified empty outward access column; inactive studs remain obstacles':p.source==='ldraw-keyed-axial-envelope-v1'?'source-preserving cross solids or certified keyed through channel; engagement excludes shaft bevels':p.source==='ldraw-axial-envelope-v1'?'source-preserving convex bodies with a certified through channel; R4 fixed or sliding poses according to each connector contract':p.source==='ldraw-shadow-envelope-v1'?'conservative convex body; only verified exterior stud/socket connections; concave interior fits may be rejected':'convex compound envelopes; curved surfaces conservative'}:{supported:false,...unavailableReason(part)};}
 export function rotate(v:Vec,rotation:Vec):Vec{
  const [x,y,z]=rotation.map(a=>a*Math.PI/180),a=Math.cos(x),b=Math.sin(x),c=Math.cos(y),d=Math.sin(y),e=Math.cos(z),f=Math.sin(z);
  return [c*e*v[0]-c*f*v[1]+d*v[2],(a*f+b*e*d)*v[0]+(a*e-b*f*d)*v[1]-b*c*v[2],(b*f-a*e*d)*v[0]+(b*e+a*f*d)*v[1]+a*c*v[2]].map(n=>Math.round(n*1e6)/1e6) as Vec;
@@ -77,9 +51,23 @@ function intersects(a:Solid,b:Solid){
  for(const axis of axes){const len=Math.hypot(...axis);if(len<1e-8)continue;const aa=a.vertices.map(v=>dot(v,axis)/len),bb=b.vertices.map(v=>dot(v,axis)/len);if(Math.min(Math.max(...aa),Math.max(...bb))-Math.max(Math.min(...aa),Math.min(...bb))<=EPS)return false;}
  return true;
 }
-function world(p:Piece){const def=profile(p.part)!;const solids=def.solids.map(s=>transform(s,p));const connectors=def.connectors.map(c=>({...c,point:plus(rotate(c.point,p.rotation),p.position),normal:rotate(c.normal,p.rotation)}));return {piece:p,solids,connectors,bounds:bounds(solids.flatMap(s=>s.vertices))};}
+const isAxial=(c:Connector):c is AxialConnector=>isMechanicalConnector(c);
+const isHip=(c:Connector):c is MinifigHipConnector=>c.kind==='hip-stud'||c.kind==='hip-socket';
+const isNeck=(c:Connector):c is MinifigNeckConnector=>c.kind==='neck'||c.kind==='neck-socket';
+const isPin=(c:Connector):c is TechnicPinConnector=>c.kind==='pin'||c.kind==='pin-hole';
+function transformConnector(c:Connector,p:Piece):Connector{return isAxial(c)?transformAxialConnector(c,v=>rotate(v,p.rotation),p.position):isHip(c)?{...c,point:plus(rotate(c.point,p.rotation),p.position),normal:rotate(c.normal,p.rotation),heading:rotate(c.heading,p.rotation)}:{...c,point:plus(rotate(c.point,p.rotation),p.position),normal:rotate(c.normal,p.rotation)};}
+function world(p:Piece){const def=profile(p.part)!;const solids=def.solids.map(s=>transform(s,p));const connectors=def.connectors.map(c=>transformConnector(c,p));return {piece:p,solids,connectors,bounds:bounds([...solids.flatMap(s=>s.vertices),...connectors.filter(c=>c.kind==='stud').flatMap(c=>studSolid(c).vertices)])};}
 type World=ReturnType<typeof world>;
-function matched(a:Connector,b:Connector){return a.kind!==b.kind&&near(a.point,b.point)&&dot(a.normal,b.normal)<-.999;}
+function compatibleKinds(a:Connector,b:Connector){return a.kind==='stud'&&b.kind==='socket'||a.kind==='socket'&&b.kind==='stud'||isAxial(a)&&isAxial(b)&&mechanicalKindsCompatible(a,b)||isPin(a)&&isPin(b)&&technicPinKindsCompatible(a,b)||isNeck(a)&&isNeck(b)&&minifigNeckKindsCompatible(a,b)||isHip(a)&&isHip(b)&&minifigHipKindsCompatible(a,b);}
+function matched(a:Connector,b:Connector){if(!compatibleKinds(a,b))return false;if(isHip(a)&&isHip(b))return minifigHipConnectorsMatch(a,b);if(isNeck(a)&&isNeck(b))return minifigNeckConnectorsMatch(a,b);if(isPin(a)&&isPin(b))return technicPinConnectorsMatch(a,b);return isAxial(a)&&isAxial(b)?axialConnectorsMatch(a,b):near(a.point,b.point)&&dot(a.normal,b.normal)<-.999;}
+function orientationFits(a:Connector,b:Connector,r:Vec){
+ if(!compatibleKinds(a,b))return false;
+ if(isAxial(a)&&isAxial(b))return axialConnectorsMatch(a,transformAxialConnector(b,v=>rotate(v,r),minus(a.point,rotate(b.point,r))));
+ if(isHip(a)&&isHip(b))return minifigHipConnectorsMatch(a,{...b,point:a.point,normal:rotate(b.normal,r),heading:rotate(b.heading,r)});
+ if(isNeck(a)&&isNeck(b))return minifigNeckConnectorsMatch(a,{...b,point:a.point,normal:rotate(b.normal,r)});
+ if(isPin(a)&&isPin(b))return technicPinConnectorsMatch(a,{...b,point:a.point,normal:rotate(b.normal,r)});
+ return dot(a.normal,rotate(b.normal,r))<-.999;
+}
 function studSolid(c:Connector):Solid{
  // Stud intrusion is tested separately; the matching socket reserves this space.
  const n=c.normal,k=n.findIndex(v=>Math.abs(v)>.9);const min=c.point.map((v,i)=>i===k?v+Math.min(0,n[i]*4):v-6) as Vec,max=c.point.map((v,i)=>i===k?v+Math.max(0,n[i]*4):v+6) as Vec;
@@ -87,17 +75,39 @@ function studSolid(c:Connector):Solid{
 }
 export type AssemblyIssue={code:string;pieces:string[];message:string};
 export function inspectAssembly(pieces:Piece[]){
- const issues:AssemblyIssue[]=[],worlds:World[]=[],connections:{a:string;b:string;connectorA:string;connectorB:string}[]=[];
+ const issues:AssemblyIssue[]=[],worlds:World[]=[],connections:AssemblyConnection[]=[];
  let issueCount=0;const issue=(code:string,ids:string[],message:string)=>{issueCount++;if(issues.length<80)issues.push({code,pieces:ids,message});};
  let portCount=0;
  for(const p of pieces){const def=profile(p.part);if(!def){issue('unsupported_part',[p.id],`Pieza ${p.part} sin perfil de encaje.`);continue;}portCount+=def.connectors.length;if(portCount>40000){issue('complexity_limit',[p.id],'El ensamblaje supera el límite de 40.000 puntos de conexión.');return {valid:false,issueCount,issues,truncated:false,connections,checked:worlds.length,unsupported:pieces.length-worlds.length,limitation:'Límite de complejidad excedido.'};}if(!validRotation(p)){issue('unsupported_rotation',[p.id],'Solo se admiten giros de 90° en los perfiles actuales.');continue;}worlds.push(world(p));}
  const graph=new Map(worlds.map(w=>[w.piece.id,new Set<string>()])),ground=new Set<string>();
- const ports=new Map<string,{w:World;c:Connector}[]>(),occupied=new Map<string,number>();
+ const ports=new Map<string,{w:World;c:Connector;order:number}[]>(),occupied=new Map<string,number>();let portOrder=0;
  const key=(v:Vec)=>v.map(n=>Math.round(n*100)).join(',');
  portLoop:for(const w of worlds){const minY=Math.min(w.bounds.min[1],...w.connectors.filter(c=>c.kind==='stud').map(c=>bounds(studSolid(c).vertices).min[1]));if(minY<-EPS)issue('below_ground',[w.piece.id],'La pieza atraviesa el suelo.');if(Math.abs(minY)<=EPS)ground.add(w.piece.id);
-  for(const c of w.connectors){const k=key(c.point),list=ports.get(k)||[];for(const q of list){if(q.w===w||!matched(c,q.c))continue;const ids=[w.piece.id+'/'+c.id,q.w.piece.id+'/'+q.c.id];if(ids.some(id=>occupied.has(id))){issue('occupied_connector',[w.piece.id,q.w.piece.id],'Un punto de conexión está ocupado por más de una pieza.');if(issueCount>=80)break portLoop;continue;}connections.push({a:w.piece.id,b:q.w.piece.id,connectorA:c.id,connectorB:q.c.id});graph.get(w.piece.id)!.add(q.w.piece.id);graph.get(q.w.piece.id)!.add(w.piece.id);for(const id of ids)occupied.set(id,1);}list.push({w,c});ports.set(k,list);}
+  for(const c of w.connectors){
+   if(isAxial(c))continue;
+   // Rounding cells are only a broad phase: matching points can straddle a
+   // boundary. Fixed families usually need one cell, or two at a boundary;
+   // studs need the full .01-LDU neighborhood. Keep matched as the exact gate.
+   const radius=isHip(c)||isNeck(c)||isPin(c)?1e-8:EPS;
+   const lo=c.point.map(n=>Math.round((n-radius)*100)),hi=c.point.map(n=>Math.round((n+radius)*100));
+   const candidates:{w:World;c:Connector;order:number}[]=[];
+   // Input positions are bounded by the model validator. Guard direct calls
+   // too, so a non-finite cell cannot turn the numeric loops into an endless scan.
+   if([...lo,...hi].every(Number.isSafeInteger))for(let x=lo[0];x<=hi[0];x++)for(let y=lo[1];y<=hi[1];y++)for(let z=lo[2];z<=hi[2];z++){
+    const list=ports.get(x+','+y+','+z);if(list)candidates.push(...list);
+   }
+   // Preserve first-insertion occupancy precedence across neighboring cells.
+   candidates.sort((a,b)=>a.order-b.order);
+   for(const q of candidates){if(q.w===w||!matched(c,q.c))continue;const ids=[w.piece.id+'/'+c.id,q.w.piece.id+'/'+q.c.id];if(ids.some(id=>occupied.has(id))){issue('occupied_connector',[w.piece.id,q.w.piece.id],'Un punto de conexión está ocupado por más de una pieza.');if(issueCount>=80)break portLoop;continue;}connections.push({a:w.piece.id,b:q.w.piece.id,connectorA:c.id,connectorB:q.c.id});graph.get(w.piece.id)!.add(q.w.piece.id);graph.get(q.w.piece.id)!.add(w.piece.id);for(const id of ids)occupied.set(id,1);}
+   // Only prior ports were queried, and each cell once, so pairs stay unique.
+   const k=key(c.point),list=ports.get(k)||[];list.push({w,c,order:portOrder++});ports.set(k,list);
+  }
  }
  for(const [id,n] of occupied)if(n>1)issue('occupied_connector',[id.split('/')[0]],'Un punto de conexión está ocupado por más de una pieza.');
+ const axial=collectAxialConnections(worlds.flatMap(w=>w.connectors.filter(isAxial).map(connector=>({pieceId:w.piece.id,connector}))));
+ for(const connection of axial.connections){connections.push(connection);graph.get(connection.a)!.add(connection.b);graph.get(connection.b)!.add(connection.a);}
+ for(const problem of axial.issues)issue(problem.code,problem.pieces,problem.message);
+ if(axial.truncated&&axial.issues.length===0)issue('complexity_limit',[],'La comprobación de conexiones axiales supera el límite de complejidad.');
  // Sweep broad phase includes the 4 LDU stud extension in every direction.
  const sorted=[...worlds].sort((a,b)=>a.bounds.min[0]-b.bounds.min[0]);
  collisionLoop:for(let i=0;i<sorted.length;i++)for(let j=i+1;j<sorted.length;j++){
@@ -112,38 +122,97 @@ export function inspectAssembly(pieces:Piece[]){
  }
  const reached=new Set(ground),queue=[...ground];for(let i=0;i<queue.length;i++)for(const id of graph.get(queue[i])||[])if(!reached.has(id)){reached.add(id);queue.push(id);}
  for(const w of worlds)if(!reached.has(w.piece.id))issue('disconnected',[w.piece.id],'La pieza no está conectada a una construcción apoyada en el suelo.');
- return {valid:issueCount===0,issueCount,issues,truncated:issueCount>=80,connections,checked:worlds.length,unsupported:pieces.length-worlds.length,limitation:'Encaje geométrico de los perfiles admitidos. No simula resistencia, fricción ni articulaciones; superficies curvas con envolvente conservadora. El informe se acota a 80 incidencias.'};
+ return {valid:issueCount===0,issueCount,issues,truncated:issueCount>=80||axial.truncated,connections,checked:worlds.length,unsupported:pieces.length-worlds.length,limitation:'Encaje geométrico de los perfiles admitidos. No simula resistencia, fricción ni articulaciones; superficies curvas con envolvente conservadora. El informe se acota a 80 incidencias.'};
 }
 export function assertAssembly(pieces:Piece[]){const report=inspectAssembly(pieces);if(!report.valid){const e=report.issues[0];throw new Error(`Colocación rechazada: ${e.message} [${e.pieces.join(', ')}] (${report.issueCount} incidencias).`);}return report;}
-export function worldConnections(pieces:Piece[],pieceId:string){const p=pieces.find(p=>p.id===pieceId);if(!p)throw new Error('Pieza de referencia desconocida.');if(!profile(p.part)||!validRotation(p))throw new Error('La pieza no tiene un perfil de encaje compatible.');const report=inspectAssembly(pieces),used=new Set(report.connections.flatMap(c=>[c.a+'/'+c.connectorA,c.b+'/'+c.connectorB]));return world(p).connectors.map(c=>({...c,occupied:used.has(p.id+'/'+c.id)}));}
-export type ConnectionRequest={anchorId:string;anchorConnector:string;partConnector:string;rotation:Vec};
+export function worldConnections(pieces:Piece[],pieceId:string){
+ const p=pieces.find(p=>p.id===pieceId);if(!p)throw new Error('Pieza de referencia desconocida.');if(!profile(p.part)||!validRotation(p))throw new Error('La pieza no tiene un perfil de encaje compatible.');
+ const report=inspectAssembly(pieces),used=new Set(report.connections.flatMap(c=>[c.a+'/'+c.connectorA,c.b+'/'+c.connectorB]));
+ return world(p).connectors.map(c=>{
+  const reservations=report.connections.flatMap(connection=>{const a=connection.axial;return a&&((a.barPieceId===p.id&&a.barConnectorId===c.id)||(a.receiverPieceId===p.id&&a.receiverConnectorId===c.id))?[a]:[];});
+  const shareable=isAxial(c)&&isShaft(c)&&!isLegacyAxial(c)&&!reservations.some(r=>r.exclusive);
+  return {...c,shareable,reservations,occupied:used.has(p.id+'/'+c.id)&&!shareable};
+ });
+}
+export type ConnectionRequest={anchorId:string;anchorConnector:string;partConnector:string;rotation:Vec;axialOffset?:number};
 export function resolveConnection(pieces:Piece[],piece:Piece,request:ConnectionRequest):Piece{
+ const axialOffset=Object.hasOwn(request,'axialOffset')?request.axialOffset:0;
+ if(typeof axialOffset!=='number'||!Number.isFinite(axialOffset))throw new Error('El desplazamiento axial debe ser un número finito.');
  const anchor=pieces.find(p=>p.id===request.anchorId);if(!anchor||anchor.id===piece.id)throw new Error('Pieza de referencia inválida.');
  if(!profile(anchor.part)||!profile(piece.part)||!validRotation(anchor)||!validRotation({...piece,rotation:request.rotation}))throw new Error('Pieza o giro sin perfil de encaje.');
- const a=world(anchor).connectors.find(c=>c.id===request.anchorConnector),b=profile(piece.part)!.connectors.find(c=>c.id===request.partConnector);if(!a||!b||a.kind===b.kind)throw new Error('Conectores incompatibles.');if(dot(a.normal,rotate(b.normal,request.rotation))>-.999)throw new Error('Los conectores no están enfrentados con este giro.');
- return {...piece,rotation:request.rotation,position:minus(a.point,rotate(b.point,request.rotation))};
+ const a=world(anchor).connectors.find(c=>c.id===request.anchorConnector),b=profile(piece.part)!.connectors.find(c=>c.id===request.partConnector);if(!a||!b||!compatibleKinds(a,b))throw new Error('Conectores incompatibles.');if(!orientationFits(a,b,request.rotation))throw new Error('Los conectores no están enfrentados o sus secciones no son compatibles con este giro.');
+ if(axialOffset!==0&&(!isAxial(a)||!isAxial(b)))throw new Error('Esta conexión no admite desplazamiento axial.');
+ const target=plus(a.point,a.normal.map(n=>n*axialOffset) as Vec);
+ const result={...piece,rotation:request.rotation,position:minus(target,rotate(b.point,request.rotation))};
+ const transformed=transformConnector(b,result);
+ if(!matched(a,transformed)||(isAxial(a)&&isAxial(transformed)&&axialOffset!==0&&axialEngagement(a,transformed)?.mode==='fixed'))throw new Error('El desplazamiento no respeta el contrato de la conexión axial.');
+ return result;
 }
 const rotations:Vec[]=[];const matrices=new Set<string>();for(const x of [0,90,180,270])for(const y of [0,90,180,270])for(const z of [0,90,180,270]){const r:Vec=[x,y,z],k=[[1,0,0],[0,1,0],[0,0,1]].flatMap(v=>rotate(v as Vec,r)).join(',');if(!matrices.has(k)){matrices.add(k);rotations.push(r);}}
+const placementSampling={axialStepLdu:4,includesGapBoundaries:true,continuousOffsetsAccepted:true,exhaustive:false};
+type WorldPort=ReturnType<typeof worldConnections>[number];
+function offsetSamples(anchor:WorldPort,other:Connector,rotation:Vec){
+ const rotated=isAxial(other)?transformAxialConnector(other,v=>rotate(v,rotation),[0,0,0]):null;
+ const range=isAxial(anchor)&&rotated?axialOffsetRange(anchor,rotated):[0,0];
+ if(!range)return {count:0,at:(_index:number)=>0,allowed:(_offset:number)=>false};
+ let gaps:[number,number][]=[[range[0],range[1]]];
+ if(isAxial(anchor)&&isShaft(anchor)&&rotated&&!isShaft(rotated)){
+  const half=rotated.axial.length/2;
+  for(const reservation of anchor.reservations){
+   if(reservation.exclusive)return {count:0,at:(_index:number)=>0,allowed:(_offset:number)=>false};
+   const lo=reservation.interval[0]-half,hi=reservation.interval[1]+half;
+   gaps=gaps.flatMap(([a,b]):[number,number][]=>{
+    if(lo>=b||hi<=a)return [[a,b]];
+    const result:[number,number][]=[];
+    if(lo>=a)result.push([a,Math.min(b,lo)]);
+    if(hi<=b)result.push([Math.max(a,hi),b]);
+    return result;
+   });
+  }
+ }
+ const allowed=(value:number)=>gaps.some(([a,b])=>value>=a&&value<=b);
+ const steps=Math.floor(Math.max(Math.abs(range[0]),Math.abs(range[1]))/4);
+ const boundary=[...new Set(gaps.flat())].filter(value=>value!==0&&value%4!==0);
+ // Arithmetic indexing avoids allocating every 4-LDU position on a long bar.
+ // Try zero and the first +/-4 pair, then non-grid gap/end boundaries, followed
+ // by the remaining grid. A page can jump over earlier alignments in O(1).
+ const prefix=steps>0?3:1,count=1+2*steps+boundary.length;
+ const grid=(index:number)=>index===0?0:Math.ceil(index/2)*4*(index%2?1:-1);
+ const at=(index:number)=>index<prefix?grid(index):index<prefix+boundary.length?boundary[index-prefix]:grid(index-boundary.length);
+ return {count,at,allowed};
+}
 export function placementOptions(pieces:Piece[],part:string,anchorId:string,anchorConnector?:string,offset=0,limit=12){
+ if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>24)throw new Error('Paginación inválida.');
  if(!profile(part))throw new Error('Esta referencia aún no tiene perfil de encaje.');
  const ports=worldConnections(pieces,anchorId).filter(c=>!c.occupied&&(!anchorConnector||c.id===anchorConnector));
- if(!ports.length)return {options:[],nextOffset:null,examined:0};
+ if(!ports.length)return {options:[],nextOffset:null,examined:0,sampling:placementSampling};
  const def=profile(part)!,prototype:Piece={id:'placement-preview',part,color:4,position:[0,0,0],rotation:[0,0,0],step:1,group:''};
  while(pieces.some(p=>p.id===prototype.id))prototype.id+='x';
  // Paginate compatible alignments, never thousands of stud/stud or reversed pairs.
  const entryCache=new Map<string,{b:Connector;r:Vec}[]>();
- const choices=ports.map(a=>{const key=a.kind+':'+a.normal.join(',');let entries=entryCache.get(key);if(!entries){entries=def.connectors.flatMap(b=>a.kind===b.kind?[]:rotations.filter(r=>dot(a.normal,rotate(b.normal,r))<-.999).map(r=>({b,r})));entryCache.set(key,entries);}return {a,entries};});
- const total=choices.reduce((n,c)=>n+c.entries.length,0),options:any[]=[],seen=new Set<string>();let cursor=0,examined=0;
- outer:for(const {a,entries} of choices){if(cursor+entries.length<=offset){cursor+=entries.length;continue;}for(const {b,r} of entries){
-  if(cursor++<offset)continue;
-  const connection={anchorId,anchorConnector:a.id,partConnector:b.id,rotation:r},p=resolveConnection(pieces,prototype,connection),key=p.position.join(',')+'/'+r.join(',');
-  if(!seen.has(key)){seen.add(key);examined++;if(inspectAssembly([...pieces,p]).valid)options.push({connection,position:p.position,rotation:p.rotation});}
-  if(examined>=128||options.length>=Math.min(24,limit))break outer;
- }}
- return {options,nextOffset:cursor<total?cursor:null,examined};
+ const choices=ports.map(a=>{const key=JSON.stringify([a.kind,a.normal,isAxial(a)?a.axial:null,isHip(a)?a.heading:null]);let entries=entryCache.get(key);if(!entries){entries=def.connectors.flatMap(b=>!compatibleKinds(a,b)?[]:rotations.filter(r=>orientationFits(a,b,r)).map(r=>({b,r})));entryCache.set(key,entries);}return {a,entries};});
+ const sampled=choices.map(({a,entries})=>({a,entries:entries.map(entry=>({...entry,samples:offsetSamples(a,entry.b,entry.r)}))}));
+ const total=sampled.reduce((n,c)=>n+c.entries.reduce((sum,e)=>sum+e.samples.count,0),0),options:any[]=[],seen=new Set<string>();let cursor=0,examined=0;
+ outer:for(const {a,entries} of sampled)for(const {b,r,samples} of entries){
+  if(cursor+samples.count<=offset){cursor+=samples.count;continue;}
+  const start=Math.max(0,offset-cursor);cursor+=start;
+  for(let index=start;index<samples.count;index++){
+   cursor++;examined++;
+   const axialOffset=samples.at(index);
+   if(samples.allowed(axialOffset)){
+    const connection:ConnectionRequest={anchorId,anchorConnector:a.id,partConnector:b.id,rotation:r,...isAxial(a)?{axialOffset}:{}};
+    let p:Piece;
+    try{p=resolveConnection(pieces,prototype,connection);}catch{if(examined>=128)break outer;continue;}
+    const key=p.position.join(',')+'/'+r.join(',');
+    if(!seen.has(key)){seen.add(key);if(inspectAssembly([...pieces,p]).valid)options.push({connection,position:p.position,rotation:p.rotation});}
+   }
+   if(examined>=128||options.length>=limit)break outer;
+  }
+ }
+ return {options,nextOffset:cursor<total?cursor:null,examined,sampling:placementSampling};
 }
 export function groundPlacement(pieces:Piece[],part:string):Vec{
  const def=profile(part);if(!def)throw new Error('Esta referencia aún no tiene perfil de encaje.');
- const b=bounds(def.solids.flatMap(s=>s.vertices));const occupied=pieces.filter(p=>profile(p.part)&&validRotation(p)).map(p=>world(p).bounds);
+ const b=world({id:'ground-preview',part,color:4,position:[0,0,0],rotation:[0,0,0],step:1,group:''}).bounds;const occupied=pieces.filter(p=>profile(p.part)&&validRotation(p)).map(p=>world(p).bounds);
  const edge=Math.max(0,...occupied.map(b=>b.max[0]));return [pieces.length?Math.ceil((edge-b.min[0]+20)/20)*20:0,-b.min[1],0];
 }
