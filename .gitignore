@@ -2,6 +2,9 @@
 node_modules/
 /dist/
 /dist-server/
+/release/
+/.desktop-tests/
+/.desktop-cache/
 /coverage/
 *.tsbuildinfo
 *.log
