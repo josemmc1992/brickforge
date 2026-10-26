@@ -1,0 +1,51 @@
+{
+  "appId": "com.brickforge.desktop",
+  "productName": "Brickforge",
+  "asar": true,
+  "npmRebuild": false,
+  "directories": { "output": "release", "buildResources": "desktop/assets" },
+  "files": [
+    "dist/**/*",
+    "dist-server/*.mjs",
+    "desktop/*.mjs",
+    "desktop/assets/icon.png",
+    "package.json",
+    "THIRD_PARTY_NOTICES.md",
+    "!**/*.map",
+    "!**/.env*",
+    "!**/*.sqlite*",
+    "!**/backups/**/*",
+    "!**/data/**/*"
+  ],
+  "electronLanguages": ["es", "en-US"],
+  "electronFuses": {
+    "runAsNode": false,
+    "enableCookieEncryption": true,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "enableNodeCliInspectArguments": false,
+    "enableEmbeddedAsarIntegrityValidation": true,
+    "onlyLoadAppFromAsar": true
+  },
+  "win": {
+    "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }],
+    "icon": "desktop/assets/icon.ico",
+    "executableName": "Brickforge",
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "artifactName": "Brickforge-Setup-${version}.${ext}",
+    "oneClick": false,
+    "perMachine": false,
+    "allowElevation": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Brickforge",
+    "deleteAppDataOnUninstall": false,
+    "runAfterFinish": false,
+    "installerLanguages": ["es_ES", "en_US"],
+    "language": "3082"
+  },
+  "portable": { "artifactName": "Brickforge-Portable-${version}.${ext}" },
+  "publish": null
+}

@@ -1,0 +1,11 @@
+LDCad Shadow Library and its contributors
+https://github.com/RolandMelkert/LDCadShadowLibrary
+Pinned revision: 9b1131fb1991f8c0bfc072325e4e12f6271aba35
+License: CC BY-SA 4.0 (LICENSE.md)
+
+Changes by Brickforge: interpretation of supported directives, inherited
+transformations, coordinate conversion, diagnostics and compressed storage.
+These files describe connection metadata, not collision-free assemblies.
+
+Original snapshot, source-file credits and reproducible interpreter:
+vendor/ldcad-shadow/ in https://github.com/josemmc1992/brickforge

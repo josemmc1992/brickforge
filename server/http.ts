@@ -6,8 +6,11 @@ import {createHash,createHmac,timingSafeEqual} from 'node:crypto';
 import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {createMcpServer} from './mcp';
 import {operation,ServiceError} from '../lib/service';
-import {owner,root} from './database';
+import {owner,root,sqlite,databasePath} from './database';
 import {VERSION} from '../lib/version';
+import {captureBroker,closeCaptureBroker,CaptureError} from './capture';
+import {CAPTURE_RESULT_BODY_BYTES} from '../lib/capture';
+import {MODEL_REQUEST_MAX_BYTES} from '../lib/limits';
 
 const port=Number(process.env.PORT||3100),host=process.env.HOST||'127.0.0.1';
 const token=process.env.BRICKFORGE_TOKEN||'';
@@ -29,14 +32,14 @@ function authorized(req:IncomingMessage){
  return !!cookie&&validSession(cookie.slice('brickforge_session='.length));
 }
 function json(res:ServerResponse,status:number,data:unknown){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
-async function body(req:IncomingMessage){
+async function body(req:IncomingMessage,limit=1000000){
  if(!req.headers['content-type']?.startsWith('application/json'))throw new ServiceError('Content-Type application/json required',415);
  const chunks:Buffer[]=[];let size=0;
- for await(const chunk of req){size+=chunk.length;if(size>1000000)throw new ServiceError('Payload too large',413);chunks.push(chunk);}
+ for await(const chunk of req){size+=chunk.length;if(size>limit)throw new ServiceError('Payload too large',413);chunks.push(chunk);}
  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw new ServiceError('Invalid JSON',400);}
 }
 const mime:Record<string,string>={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.txt':'text/plain; charset=utf-8','.bin':'application/octet-stream','.png':'image/png','.woff2':'font/woff2'};
-const server=createServer(async(req,res)=>{
+export const server=createServer(async(req,res)=>{
  try{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');
   if(!hosts.has(req.headers.host||'')||(req.headers.origin&&!origins.has(req.headers.origin))||req.headers['sec-fetch-site']==='cross-site'){json(res,403,{error:'Origin or Host not permitted'});return;}
@@ -49,16 +52,25 @@ const server=createServer(async(req,res)=>{
    res.setHeader('Set-Cookie',`brickforge_session=${sessionCookie()}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200${publicOrigin?.startsWith('https:')?'; Secure':''}`);
    json(res,200,{ok:true});return;
   }
-  if(pathname==='/mcp'||pathname==='/api/action'){
+  if(pathname==='/mcp'||pathname==='/api/action'||pathname==='/api/capture/claim'||pathname==='/api/capture/result'){
    if(!authorized(req)){res.setHeader('WWW-Authenticate','Bearer realm="Brickforge"');json(res,401,{error:'Authentication required'});return;}
    if(pathname==='/mcp'){
     if(req.method!=='POST'){res.setHeader('Allow','POST');res.writeHead(405);res.end();return;}
-    const data=await body(req);const mcp=createMcpServer();
+    const data=await body(req,MODEL_REQUEST_MAX_BYTES);const mcp=createMcpServer();
     const transport=new StreamableHTTPServerTransport({sessionIdGenerator:undefined,enableJsonResponse:true});
     res.on('close',()=>{void mcp.close();});await mcp.connect(transport);await transport.handleRequest(req,res,data);return;
    }
    if(req.method!=='POST'){res.setHeader('Allow','POST');res.writeHead(405);res.end();return;}
-   const data=await body(req);json(res,200,await operation(data.name,data.args??{},owner));return;
+   if(pathname==='/api/capture/claim'){
+    const data=await body(req);
+    if(!data||typeof data!=='object'||Array.isArray(data)||Object.keys(data).length)throw new CaptureError('La solicitud de captura debe ser un objeto vacío.');
+    json(res,200,{job:captureBroker(databasePath).claim(owner)});return;
+   }
+   if(pathname==='/api/capture/result'){
+    captureBroker(databasePath).complete(owner,await body(req,CAPTURE_RESULT_BODY_BYTES));
+    json(res,200,{ok:true});return;
+   }
+   const data=await body(req,MODEL_REQUEST_MAX_BYTES);json(res,200,await operation(data.name,data.args??{},owner));return;
   }
   if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405);res.end();return;}
   let file=resolve(webRoot,'.'+decodeURIComponent(pathname));
@@ -69,7 +81,20 @@ const server=createServer(async(req,res)=>{
   res.setHeader('Content-Type',mime[extname(file)]||'application/octet-stream');res.setHeader('Content-Length',info.size);
   res.setHeader('Cache-Control',pathname.startsWith('/assets/')?'public,max-age=31536000,immutable':'no-cache');
   if(req.method==='HEAD'){res.end();return;}createReadStream(file).on('error',()=>res.destroy()).pipe(res);
- }catch(error){if(!res.headersSent)json(res,error instanceof ServiceError?error.status:400,{error:error instanceof Error?error.message:'Request failed'});else res.end();}
+ }catch(error){if(!res.headersSent)json(res,error instanceof ServiceError||error instanceof CaptureError?error.status:400,{error:error instanceof Error?error.message:'Request failed'});else res.end();}
 });
 server.requestTimeout=30000;server.headersTimeout=15000;
-server.listen(port,host,()=>console.error(`Brickforge ready: ${publicOrigin||`http://${host}:${port}`} (${token?'authenticated':'local only'})`));
+export const ready=new Promise<void>((resolve,reject)=>{
+ server.once('error',reject);
+ server.listen(port,host,()=>{server.removeListener('error',reject);console.error(`Brickforge ready: ${publicOrigin||`http://${host}:${port}`} (${token?'authenticated':'local only'})`);resolve();});
+});
+// Both the CLI and desktop process wait for connections before closing SQLite.
+let stopping:Promise<void>|undefined;
+export function stopServer(){
+ return stopping??=new Promise<void>((resolve,reject)=>{
+  const timeout=setTimeout(()=>server.closeAllConnections(),4000);timeout.unref();
+  server.close(error=>{clearTimeout(timeout);try{closeCaptureBroker();sqlite.close();}catch(closeError){reject(closeError);return;}if(error&&(error as NodeJS.ErrnoException).code!=='ERR_SERVER_NOT_RUNNING')reject(error);else resolve();});
+ });
+}
+void ready.catch(error=>{console.error('Brickforge could not start:',error instanceof Error?error.message:String(error));process.exitCode=1;void stopServer().catch(()=>{});});
+for(const signal of ['SIGINT','SIGTERM'] as const)process.once(signal,()=>{void stopServer().then(()=>process.exit(0),()=>process.exit(1));});

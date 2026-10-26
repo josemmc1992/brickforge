@@ -1,0 +1,40 @@
+import {spawn} from 'node:child_process';
+import {mkdir, mkdtemp, readFile} from 'node:fs/promises';
+import {resolve, dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+import {createConnection} from 'node:net';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const packaged = process.argv.includes('--packaged');
+const portable = process.argv.includes('--portable');
+if (packaged && portable) throw new Error('Choose either --packaged or --portable');
+const mode = portable ? 'portable' : packaged ? 'packaged' : 'development';
+const require = createRequire(import.meta.url);
+const {version} = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
+const executable = portable ? resolve(root, `release/Brickforge-Portable-${version}.exe`) : packaged ? resolve(root, 'release/win-unpacked/Brickforge.exe') : require('electron');
+const testRoot = resolve(root, '.desktop-tests');
+await mkdir(testRoot, {recursive: true});
+const profile = await mkdtemp(resolve(testRoot, `${mode}-`));
+const args = [...(packaged || portable) ? [] : [root], '--smoke-test', `--test-user-data=${profile}`];
+const env = {...process.env};
+delete env.ELECTRON_RUN_AS_NODE;
+delete env.NODE_OPTIONS;
+const child = spawn(executable, args, {cwd: root, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe']});
+let diagnostics = '';
+for (const stream of [child.stdout, child.stderr]) stream.on('data', data => { diagnostics = (diagnostics + data.toString()).slice(-16000); });
+const exitCode = await new Promise((res, rej) => {
+  const timeout = setTimeout(() => {child.kill(); rej(new Error(`Desktop smoke timed out. Diagnostics: ${diagnostics}`));}, 180000);
+  child.once('error', error => {clearTimeout(timeout); rej(error);});
+  child.once('exit', code => {clearTimeout(timeout); res(code);});
+});
+if (exitCode !== 0) throw new Error(`Desktop exited with ${exitCode}. ${diagnostics}`);
+const result = JSON.parse(await readFile(resolve(profile, 'smoke-result.json'), 'utf8'));
+if (result.ok !== true) throw new Error(`Desktop smoke failed: ${JSON.stringify(result)}`);
+if (result.port) await new Promise((res, rej) => {
+  const socket = createConnection({host: '127.0.0.1', port: result.port});
+  socket.once('connect', () => {socket.destroy(); rej(new Error('Backend port is still open after app exit'));});
+  socket.once('error', () => res());
+  socket.setTimeout(3000, () => {socket.destroy(); rej(new Error('Could not verify backend shutdown'));});
+});
+console.log(JSON.stringify({mode, profile, ...result}, null, 2));

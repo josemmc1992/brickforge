@@ -1,0 +1,21 @@
+Brickforge derived connection profiles
+
+These data combine conservative geometry envelopes derived from the bundled
+LDraw library with interpreted connection data from the LDCad Shadow Library.
+The derived connection profiles are distributed under CC BY-SA 4.0; see LICENSE.md.
+
+Connection data: LDCad Shadow Library and its contributors
+https://github.com/RolandMelkert/LDCadShadowLibrary
+Pinned revision: 9b1131fb1991f8c0bfc072325e4e12f6271aba35
+Changes by Brickforge: hierarchy expansion, coordinate conversion, conservative
+geometry checks, selection of supported connections, and compressed data storage.
+
+Geometry: LDraw.org and its contributors
+https://www.ldraw.org/
+Original geometry credits and terms: ../CAreadme.txt and the bundled DAT headers.
+
+Source, reproducible compilers and provenance:
+https://github.com/josemmc1992/brickforge
+
+Metadata availability is not a claim of collision, physical strength or complete
+catalogue support. See the application's catalogue coverage and limitations.

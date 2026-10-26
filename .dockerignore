@@ -3,6 +3,9 @@ dist
 dist-server
 data
 backups
+.desktop-tests
+.desktop-cache
+release
 .env
 .env.*
 .git

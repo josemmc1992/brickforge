@@ -1,6 +1,8 @@
 # Ejecutar y desplegar Brickforge
 
-**BETA · 0.1.0-beta.1.** La instalación sirve el editor, las geometrías y el endpoint MCP desde Node.js. Los modelos residen en SQLite. No requiere un servicio cloud ni una cuenta externa.
+**BETA · 0.3.0-beta.12.** Esta guía describe el servidor web. Para la aplicación Windows con icono e instalador, consulta [Escritorio](DESKTOP.md). El servidor sirve el editor, las geometrías y el endpoint MCP desde Node.js. Los modelos residen en SQLite. No requiere un servicio cloud ni una cuenta externa.
+
+Para generar imágenes con `capture_model`, mantén un editor web autenticado abierto contra este servidor, en un navegador con WebGL 2. Un contenedor o servidor sin frontend conectado permite construir mediante MCP, pero no genera capturas por sí solo. No requiere instalar Chromium en el contenedor. Consulta [visión mediante MCP](MCP.md#ver-la-construcción-desde-la-ia).
 
 Si es tu primera instalación, empieza por [Requisitos e instalación paso a paso](INSTALLATION.md). Esta página desarrolla la configuración del servidor, el alojamiento y las copias de seguridad.
 
@@ -15,6 +17,8 @@ npm start
 ```
 
 Abre `http://127.0.0.1:3100`. La base se crea automáticamente vacía. No se distribuyen modelos personales ni copias de seguridad privadas.
+
+El catálogo se distribuye completo y funciona sin consultas externas: geometrías LDraw, metadatos de conexión y perfiles mecánicos generados. Conserva los recursos de `dist/catalog` al desplegar; el servidor carga perfiles desde `dist/catalog/assembly` bajo demanda y comprueba tamaño, hash y estructura antes de utilizarlos. Su caché de perfiles aplica un presupuesto de 128 MiB; ese presupuesto no es un límite de memoria total del servicio.
 
 `npm start`, `npm run mcp` y `npm run backup` cargan `.env` si existe en el directorio de ejecución. La invocación directa `node dist-server/stdio.mjs` no lo carga; usa variables de entorno del cliente.
 
@@ -133,7 +137,9 @@ El nombre de destino de exportación debe ser nuevo en cada ejecución. Guarda l
 ## Actualizaciones de la beta
 
 1. Exporta una copia y detén el servidor y los clientes stdio que lo utilicen.
-2. Actualiza el código, ejecuta `npm ci`, `npm run typecheck`, `npm run build` y `npm test`.
+2. Actualiza el código, ejecuta `npm ci`, `npm run typecheck`, `npm run catalog:check`, `npm run test:catalog`, `npm run build` y `npm test`.
 3. Inicia el servicio con la misma configuración y revisa `/healthz`, los modelos y el cliente MCP.
 
 Las pruebas utilizan bases temporales; no sustituyen una copia de tus datos. No hay sincronización automática entre instalaciones.
+
+`npm run build` comprueba el catálogo generado. Si modificas sus fuentes o compiladores, ejecuta antes `npm run catalog:generate` y revisa los cambios; no sustituyas una comprobación fallida por una generación automática en producción. Los datos generados de una versión deben desplegarse junto con el código de esa misma versión.

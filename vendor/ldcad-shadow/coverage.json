@@ -1,0 +1,812 @@
+{
+  "schemaVersion": 1,
+  "resolverVersion": 1,
+  "revision": "9b1131fb1991f8c0bfc072325e4e12f6271aba35",
+  "semantics": "Metadata coverage only. complete means all effective metadata was understood; it does not certify geometry, matching, collision, or usable assembly support. CYL extends along local -Y. Brickforge mirrors LDraw Y.",
+  "summary": {
+    "catalog": 20315,
+    "withMetadata": 15622,
+    "complete": 14333,
+    "partial": 1292,
+    "absent": 4690,
+    "withoutMetadata": 4693,
+    "connectors": 284500,
+    "safeConnectors": 283961,
+    "byType": {
+      "cylinder": 281436,
+      "generic": 1397,
+      "clip": 701,
+      "fingers": 966
+    },
+    "diagnostics": {
+      "unsupported_option": 854,
+      "suppressed_scale": 4388,
+      "suppressed_mirror": 2195,
+      "unsupported_orientation_scale": 3482,
+      "nested_include_semantics_unverified": 36,
+      "invalid_or_unsupported_meta": 64,
+      "unsupported_shear": 3490,
+      "malformed_meta": 1
+    },
+    "families": {
+      "Container": {
+        "total": 160,
+        "withMetadata": 138,
+        "complete": 133,
+        "partial": 5,
+        "absent": 22
+      },
+      "Plate": {
+        "total": 462,
+        "withMetadata": 462,
+        "complete": 442,
+        "partial": 20,
+        "absent": 0
+      },
+      "Minifig": {
+        "total": 2993,
+        "withMetadata": 2877,
+        "complete": 2013,
+        "partial": 864,
+        "absent": 116
+      },
+      "Windscreen": {
+        "total": 190,
+        "withMetadata": 175,
+        "complete": 175,
+        "partial": 0,
+        "absent": 15
+      },
+      "Wheel": {
+        "total": 293,
+        "withMetadata": 243,
+        "complete": 239,
+        "partial": 4,
+        "absent": 50
+      },
+      "Tyre": {
+        "total": 95,
+        "withMetadata": 4,
+        "complete": 4,
+        "partial": 0,
+        "absent": 91
+      },
+      "Tile": {
+        "total": 1653,
+        "withMetadata": 1628,
+        "complete": 1627,
+        "partial": 1,
+        "absent": 25
+      },
+      "Minifig Accessory": {
+        "total": 794,
+        "withMetadata": 621,
+        "complete": 611,
+        "partial": 13,
+        "absent": 170
+      },
+      "Antenna": {
+        "total": 8,
+        "withMetadata": 8,
+        "complete": 8,
+        "partial": 0,
+        "absent": 0
+      },
+      "Baseplate": {
+        "total": 193,
+        "withMetadata": 193,
+        "complete": 193,
+        "partial": 0,
+        "absent": 0
+      },
+      "Car": {
+        "total": 93,
+        "withMetadata": 91,
+        "complete": 91,
+        "partial": 0,
+        "absent": 2
+      },
+      "Arch": {
+        "total": 53,
+        "withMetadata": 52,
+        "complete": 52,
+        "partial": 0,
+        "absent": 1
+      },
+      "Train": {
+        "total": 296,
+        "withMetadata": 258,
+        "complete": 225,
+        "partial": 33,
+        "absent": 38
+      },
+      "Cone": {
+        "total": 42,
+        "withMetadata": 39,
+        "complete": 38,
+        "partial": 1,
+        "absent": 3
+      },
+      "Technic": {
+        "total": 1112,
+        "withMetadata": 1008,
+        "complete": 951,
+        "partial": 57,
+        "absent": 104
+      },
+      "Figure Accessory": {
+        "total": 126,
+        "withMetadata": 68,
+        "complete": 68,
+        "partial": 0,
+        "absent": 58
+      },
+      "Window": {
+        "total": 128,
+        "withMetadata": 103,
+        "complete": 95,
+        "partial": 8,
+        "absent": 25
+      },
+      "Magnet": {
+        "total": 15,
+        "withMetadata": 7,
+        "complete": 5,
+        "partial": 2,
+        "absent": 8
+      },
+      "Electric": {
+        "total": 515,
+        "withMetadata": 423,
+        "complete": 421,
+        "partial": 2,
+        "absent": 92
+      },
+      "Sheet Cardboard": {
+        "total": 15,
+        "withMetadata": 1,
+        "complete": 1,
+        "partial": 0,
+        "absent": 14
+      },
+      "Arm": {
+        "total": 13,
+        "withMetadata": 13,
+        "complete": 13,
+        "partial": 0,
+        "absent": 0
+      },
+      "Ladder": {
+        "total": 21,
+        "withMetadata": 6,
+        "complete": 6,
+        "partial": 0,
+        "absent": 15
+      },
+      "Homemaker": {
+        "total": 9,
+        "withMetadata": 4,
+        "complete": 4,
+        "partial": 0,
+        "absent": 5
+      },
+      "Vehicle": {
+        "total": 159,
+        "withMetadata": 129,
+        "complete": 116,
+        "partial": 13,
+        "absent": 30
+      },
+      "Conveyor": {
+        "total": 11,
+        "withMetadata": 1,
+        "complete": 1,
+        "partial": 0,
+        "absent": 10
+      },
+      "Roadsign": {
+        "total": 130,
+        "withMetadata": 122,
+        "complete": 122,
+        "partial": 0,
+        "absent": 8
+      },
+      "Hinge": {
+        "total": 153,
+        "withMetadata": 150,
+        "complete": 145,
+        "partial": 5,
+        "absent": 3
+      },
+      "Door": {
+        "total": 202,
+        "withMetadata": 169,
+        "complete": 169,
+        "partial": 0,
+        "absent": 33
+      },
+      "Slope": {
+        "total": 502,
+        "withMetadata": 479,
+        "complete": 476,
+        "partial": 3,
+        "absent": 23
+      },
+      "Figure": {
+        "total": 723,
+        "withMetadata": 649,
+        "complete": 543,
+        "partial": 106,
+        "absent": 74
+      },
+      "Brick": {
+        "total": 1240,
+        "withMetadata": 1216,
+        "complete": 1203,
+        "partial": 13,
+        "absent": 24
+      },
+      "Garage": {
+        "total": 16,
+        "withMetadata": 5,
+        "complete": 5,
+        "partial": 0,
+        "absent": 11
+      },
+      "Hose": {
+        "total": 63,
+        "withMetadata": 54,
+        "complete": 54,
+        "partial": 0,
+        "absent": 9
+      },
+      "Flag": {
+        "total": 109,
+        "withMetadata": 48,
+        "complete": 48,
+        "partial": 0,
+        "absent": 61
+      },
+      "Tractor": {
+        "total": 7,
+        "withMetadata": 5,
+        "complete": 5,
+        "partial": 0,
+        "absent": 2
+      },
+      "Tipper": {
+        "total": 12,
+        "withMetadata": 11,
+        "complete": 11,
+        "partial": 0,
+        "absent": 1
+      },
+      "Dish": {
+        "total": 150,
+        "withMetadata": 147,
+        "complete": 147,
+        "partial": 0,
+        "absent": 3
+      },
+      "Support": {
+        "total": 45,
+        "withMetadata": 44,
+        "complete": 44,
+        "partial": 0,
+        "absent": 1
+      },
+      "Sticker": {
+        "total": 2767,
+        "withMetadata": 0,
+        "complete": 0,
+        "partial": 0,
+        "absent": 2767
+      },
+      "Sheet Plastic": {
+        "total": 64,
+        "withMetadata": 9,
+        "complete": 9,
+        "partial": 0,
+        "absent": 55
+      },
+      "Animal": {
+        "total": 419,
+        "withMetadata": 287,
+        "complete": 262,
+        "partial": 25,
+        "absent": 132
+      },
+      "Plant": {
+        "total": 89,
+        "withMetadata": 69,
+        "complete": 64,
+        "partial": 5,
+        "absent": 20
+      },
+      "Constraction": {
+        "total": 119,
+        "withMetadata": 70,
+        "complete": 52,
+        "partial": 18,
+        "absent": 49
+      },
+      "Cylinder": {
+        "total": 88,
+        "withMetadata": 83,
+        "complete": 80,
+        "partial": 3,
+        "absent": 5
+      },
+      "Minifig Headwear": {
+        "total": 619,
+        "withMetadata": 486,
+        "complete": 483,
+        "partial": 3,
+        "absent": 133
+      },
+      "Duplo": {
+        "total": 136,
+        "withMetadata": 111,
+        "complete": 111,
+        "partial": 0,
+        "absent": 25
+      },
+      "Fence": {
+        "total": 25,
+        "withMetadata": 23,
+        "complete": 23,
+        "partial": 0,
+        "absent": 2
+      },
+      "Staircase": {
+        "total": 13,
+        "withMetadata": 8,
+        "complete": 8,
+        "partial": 0,
+        "absent": 5
+      },
+      "Wedge": {
+        "total": 99,
+        "withMetadata": 95,
+        "complete": 95,
+        "partial": 0,
+        "absent": 4
+      },
+      "Tail": {
+        "total": 26,
+        "withMetadata": 26,
+        "complete": 26,
+        "partial": 0,
+        "absent": 0
+      },
+      "Panel": {
+        "total": 211,
+        "withMetadata": 209,
+        "complete": 208,
+        "partial": 1,
+        "absent": 2
+      },
+      "Crane": {
+        "total": 29,
+        "withMetadata": 18,
+        "complete": 17,
+        "partial": 1,
+        "absent": 11
+      },
+      "Wing": {
+        "total": 72,
+        "withMetadata": 72,
+        "complete": 70,
+        "partial": 2,
+        "absent": 0
+      },
+      "Propeller": {
+        "total": 29,
+        "withMetadata": 23,
+        "complete": 23,
+        "partial": 0,
+        "absent": 6
+      },
+      "Bracket": {
+        "total": 45,
+        "withMetadata": 45,
+        "complete": 45,
+        "partial": 0,
+        "absent": 0
+      },
+      "Rack": {
+        "total": 6,
+        "withMetadata": 5,
+        "complete": 5,
+        "partial": 0,
+        "absent": 1
+      },
+      "Bar": {
+        "total": 78,
+        "withMetadata": 68,
+        "complete": 64,
+        "partial": 4,
+        "absent": 10
+      },
+      "Glass": {
+        "total": 47,
+        "withMetadata": 26,
+        "complete": 15,
+        "partial": 11,
+        "absent": 21
+      },
+      "Minifig Neckwear": {
+        "total": 110,
+        "withMetadata": 40,
+        "complete": 40,
+        "partial": 0,
+        "absent": 70
+      },
+      "Boat": {
+        "total": 122,
+        "withMetadata": 112,
+        "complete": 108,
+        "partial": 4,
+        "absent": 10
+      },
+      "Constraction Accessory": {
+        "total": 31,
+        "withMetadata": 22,
+        "complete": 22,
+        "partial": 0,
+        "absent": 9
+      },
+      "Platform": {
+        "total": 2,
+        "withMetadata": 2,
+        "complete": 2,
+        "partial": 0,
+        "absent": 0
+      },
+      "Cockpit": {
+        "total": 12,
+        "withMetadata": 11,
+        "complete": 11,
+        "partial": 0,
+        "absent": 1
+      },
+      "Monorail": {
+        "total": 23,
+        "withMetadata": 21,
+        "complete": 17,
+        "partial": 4,
+        "absent": 2
+      },
+      "Turntable": {
+        "total": 25,
+        "withMetadata": 20,
+        "complete": 20,
+        "partial": 0,
+        "absent": 5
+      },
+      "Exhaust": {
+        "total": 5,
+        "withMetadata": 2,
+        "complete": 2,
+        "partial": 0,
+        "absent": 3
+      },
+      "Plane": {
+        "total": 31,
+        "withMetadata": 31,
+        "complete": 29,
+        "partial": 2,
+        "absent": 0
+      },
+      "Tap": {
+        "total": 8,
+        "withMetadata": 8,
+        "complete": 8,
+        "partial": 0,
+        "absent": 0
+      },
+      "Minifig Hipwear": {
+        "total": 31,
+        "withMetadata": 20,
+        "complete": 20,
+        "partial": 0,
+        "absent": 11
+      },
+      "Rock": {
+        "total": 38,
+        "withMetadata": 28,
+        "complete": 28,
+        "partial": 0,
+        "absent": 10
+      },
+      "Minifig Footwear": {
+        "total": 13,
+        "withMetadata": 13,
+        "complete": 13,
+        "partial": 0,
+        "absent": 0
+      },
+      "Belville": {
+        "total": 10,
+        "withMetadata": 9,
+        "complete": 9,
+        "partial": 0,
+        "absent": 1
+      },
+      "Sphere": {
+        "total": 16,
+        "withMetadata": 13,
+        "complete": 13,
+        "partial": 0,
+        "absent": 3
+      },
+      "Scala": {
+        "total": 25,
+        "withMetadata": 21,
+        "complete": 21,
+        "partial": 0,
+        "absent": 4
+      },
+      "Sheet Fabric": {
+        "total": 84,
+        "withMetadata": 0,
+        "complete": 0,
+        "partial": 0,
+        "absent": 84
+      },
+      "String": {
+        "total": 1,
+        "withMetadata": 1,
+        "complete": 1,
+        "partial": 0,
+        "absent": 0
+      },
+      "Sticker Shortcut": {
+        "total": 1825,
+        "withMetadata": 1764,
+        "complete": 1711,
+        "partial": 53,
+        "absent": 61
+      },
+      "Trailer": {
+        "total": 3,
+        "withMetadata": 3,
+        "complete": 3,
+        "partial": 0,
+        "absent": 0
+      },
+      "Znap": {
+        "total": 23,
+        "withMetadata": 18,
+        "complete": 18,
+        "partial": 0,
+        "absent": 5
+      },
+      "Clikits": {
+        "total": 3,
+        "withMetadata": 0,
+        "complete": 0,
+        "partial": 0,
+        "absent": 3
+      },
+      "Winch": {
+        "total": 6,
+        "withMetadata": 6,
+        "complete": 6,
+        "partial": 0,
+        "absent": 0
+      },
+      "Modulex": {
+        "total": 39,
+        "withMetadata": 27,
+        "complete": 27,
+        "partial": 0,
+        "absent": 12
+      },
+      "Minifig Head": {
+        "total": 12,
+        "withMetadata": 12,
+        "complete": 12,
+        "partial": 0,
+        "absent": 0
+      },
+      "Minifig Leg": {
+        "total": 11,
+        "withMetadata": 10,
+        "complete": 10,
+        "partial": 0,
+        "absent": 1
+      },
+      "Minifig Lower": {
+        "total": 6,
+        "withMetadata": 6,
+        "complete": 6,
+        "partial": 0,
+        "absent": 0
+      },
+      "Minifig Torso": {
+        "total": 7,
+        "withMetadata": 7,
+        "complete": 7,
+        "partial": 0,
+        "absent": 0
+      },
+      "Minifig Upper": {
+        "total": 6,
+        "withMetadata": 6,
+        "complete": 0,
+        "partial": 6,
+        "absent": 0
+      },
+      "Minifig Hips": {
+        "total": 5,
+        "withMetadata": 5,
+        "complete": 5,
+        "partial": 0,
+        "absent": 0
+      }
+    },
+    "missingExamples": [
+      {
+        "id": "36",
+        "name": "Tyre  7/ 50 x 36"
+      },
+      {
+        "id": "277",
+        "name": "Wheelbarrow Wheels with Red Axle"
+      },
+      {
+        "id": "290",
+        "name": "Magnet Holder for Train Base  6 x 22 Type 1"
+      },
+      {
+        "id": "323",
+        "name": "Electric Light Bulb for Electric Light Brick  2 x  4"
+      },
+      {
+        "id": "420",
+        "name": "Ladder  2 x 12 Bottom Section"
+      },
+      {
+        "id": "421",
+        "name": "Ladder  2 x 12 Top Section"
+      },
+      {
+        "id": "458",
+        "name": "Tyre for Train Wheel for Electric Train Motor 12V"
+      },
+      {
+        "id": "498",
+        "name": "Technic Tread Crawler"
+      },
+      {
+        "id": "502",
+        "name": "Electric Train Motor 12V Connecting Rod"
+      },
+      {
+        "id": "505",
+        "name": "Train Steam Drive Rod"
+      },
+      {
+        "id": "506",
+        "name": "Train Steam Drive Rod Holder"
+      },
+      {
+        "id": "539",
+        "name": "Tyre for Wheel 41mm Znap"
+      },
+      {
+        "id": "574",
+        "name": "Tyre 10/130 x 17 Offset Tread for Technic Gear 9 Tooth"
+      },
+      {
+        "id": "630",
+        "name": "Conveyor Belt (Complete)"
+      },
+      {
+        "id": "631",
+        "name": "Conveyor Belt Base"
+      },
+      {
+        "id": "632",
+        "name": "Conveyor Belt Feeder"
+      },
+      {
+        "id": "633",
+        "name": "Conveyor Belt Frame"
+      },
+      {
+        "id": "634",
+        "name": "Conveyor Belt Rubber Cleated"
+      },
+      {
+        "id": "635",
+        "name": "Conveyor Belt Axle with Crank"
+      },
+      {
+        "id": "636",
+        "name": "Conveyor Belt Axle"
+      },
+      {
+        "id": "637",
+        "name": "Conveyor Belt Stand"
+      },
+      {
+        "id": "722",
+        "name": "Garage  4 x  8 x  3 Door"
+      },
+      {
+        "id": "723",
+        "name": "Lamppost"
+      },
+      {
+        "id": "727",
+        "name": "Trailer  4 x 16 Ramp"
+      },
+      {
+        "id": "776",
+        "name": "Flag on Flagpole Type 1"
+      },
+      {
+        "id": "777",
+        "name": "Flag on Flagpole Type 2"
+      },
+      {
+        "id": "779",
+        "name": "Tractor Trailer Chassis Hitching Ball"
+      },
+      {
+        "id": "783",
+        "name": "Flag on Flagpole Type 3"
+      },
+      {
+        "id": "786",
+        "name": "Flag on Flagpole Type 4"
+      },
+      {
+        "id": "789",
+        "name": "Fabuland Roof Slope with Top Hole"
+      },
+      {
+        "id": "812",
+        "name": "Train Level Crossing Centre Rail Cap Insert"
+      },
+      {
+        "id": "838",
+        "name": "Homemaker Cupboard Door  4 x  4"
+      },
+      {
+        "id": "839",
+        "name": "Homemaker Washbasin Base  4 x  4 x  4"
+      },
+      {
+        "id": "840",
+        "name": "Homemaker Washbasin Sink"
+      },
+      {
+        "id": "842",
+        "name": "Homemaker Stove Shelf  4 x  4"
+      },
+      {
+        "id": "843",
+        "name": "Homemaker Stove Door with Glass (Complete)"
+      },
+      {
+        "id": "850",
+        "name": "Ladder  2.4 x 13 Bottom Section"
+      },
+      {
+        "id": "852",
+        "name": "Ladder  2.4 x 13 Top Section"
+      },
+      {
+        "id": "861",
+        "name": "Train Track 12V Straight Insert Type 1"
+      },
+      {
+        "id": "866",
+        "name": "Train Track 12V Curved Insert Type 1 (Needs Work)"
+      }
+    ]
+  }
+}
